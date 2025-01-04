@@ -1,5 +1,3 @@
-# websocketstream
-
 # Scalable websockets powered by pubsub
 
 ## Preface
