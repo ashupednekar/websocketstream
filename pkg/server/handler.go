@@ -23,8 +23,12 @@ func HandleWs(w http.ResponseWriter, r *http.Request){
 
   log.Println("Client connected")
 
+  service, _ := r.Cookie("service")
+  user, _ := r.Cookie("user")
+  log.Printf("service: %s, user: %s", service.Value, user.Value)
+
   broker := brokers.NewBroker()
-  stream.RecvClientMessages(conn, broker)
-  stream.RecvServiceMessages(conn, broker)
+  stream.RecvClientMessages(conn, broker, service.Value, user.Value)
+  stream.RecvServiceMessages(conn, broker, service.Value, user.Value)
 
 }
