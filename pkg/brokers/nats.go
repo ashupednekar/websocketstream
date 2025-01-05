@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -31,24 +32,29 @@ func NewNatsBroker(stream string) *NatsBroker{
 }
 
 func (self *NatsBroker) Produce(subject string, data []byte){
-  self.Produce(subject, data) 
+  ctx := context.Background()
+  self.Stream.Publish(ctx, subject, data)
+  defer ctx.Done()
 }
 
 func (self *NatsBroker) Consume(subject string, ch chan Message){
-  ctx := context.Background()
+  ctx, _ := context.WithTimeout(context.Background(), time.Second * 300)
+  defer ctx.Done()
   c, err := self.Stream.CreateOrUpdateConsumer(ctx, self.StreamName, jetstream.ConsumerConfig{
     Durable: strings.ReplaceAll(fmt.Sprintf("%s-consumer", subject), ".", "-"),
+    FilterSubject: subject,
   })
   if err != nil{
     log.Fatalf("error creating consumer: %s", err)
   }
-  cons, _ := c.Consume(func(msg jetstream.Msg){
+  consumer, err := c.Consume(func(msg jetstream.Msg){
     msg.Ack()
-    log.Printf("Receved message: %v", msg.Data())
+    log.Printf("Received message: %v", msg.Data())
     ch <- Message{
       Subject: subject,
       Data: msg.Data(),
     }
   })
-  defer cons.Stop()
+  defer consumer.Stop()
+  <-ctx.Done()
 }
